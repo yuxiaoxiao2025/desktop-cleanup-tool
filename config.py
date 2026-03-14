@@ -32,10 +32,58 @@ def get_default_config() -> dict[str, Any]:
     return {
         "desktop_path": desktop,
         "delay_hours": 24,
-        "shortcut_whitelist": [],
+        "shortcut_whitelist": [
+            "Cursor.lnk",
+            "Kimi.lnk",
+            "Kiro.lnk",
+            "纳米AI.lnk",
+        ],
         "exclude_folders": ["00快捷方式", "资料"],
         "monitor_paused": False,
-        "rules": [],
+        "rules": [
+            {
+                "name": "投标与结算",
+                "keywords": ["投标", "结算", "报价", "标书"],
+                "extensions": [".docx", ".pdf", ".xlsx", ".xls"],
+                "target": "投标与结算",
+            },
+            {
+                "name": "售后与统计",
+                "keywords": ["统计", "技术中控", "售后工作量", "售后"],
+                "extensions": [".docx", ".pdf", ".xlsx", ".xls"],
+                "target": "售后与统计",
+            },
+            {
+                "name": "开发与需求",
+                "keywords": ["需求", "开发", "原型", "PRD", "设计稿"],
+                "extensions": [".md", ".docx", ".pdf", ".fig", ".sketch"],
+                "target": "开发与需求",
+            },
+            {
+                "name": "合同与协议",
+                "keywords": ["合同", "协议", "补充协议", "委托书"],
+                "extensions": [".doc", ".docx", ".pdf"],
+                "target": "合同与协议",
+            },
+            {
+                "name": "图纸与工程",
+                "keywords": ["图纸", "施工图", "竣工图", "消防", "工程"],
+                "extensions": [".dwg", ".dxf", ".pdf", ".rvt"],
+                "target": "图纸与工程",
+            },
+            {
+                "name": "图片与媒体",
+                "keywords": ["图片", "照片", "视频", "截图", "媒体"],
+                "extensions": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".mp4", ".mov", ".avi", ".mkv", ".wmv"],
+                "target": "图片与媒体",
+            },
+            {
+                "name": "压缩包",
+                "keywords": ["压缩", "打包", "归档"],
+                "extensions": [".zip", ".rar", ".7z", ".tar", ".gz"],
+                "target": "压缩包",
+            },
+        ],
         "shortcut_target": "00快捷方式",
         "default_target": "临时与杂项",
     }
