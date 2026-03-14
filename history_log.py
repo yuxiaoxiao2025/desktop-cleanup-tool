@@ -73,3 +73,13 @@ def get_recent(config: dict[str, Any] | None, n: int = 10) -> list[dict[str, Any
         reverse=True,
     )
     return sorted_items[:n]
+
+
+def get_all(config: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """读取全部历史，按 moved_at 倒序返回。供 /history 页使用。"""
+    items = _load_history_raw()
+    return sorted(
+        items,
+        key=lambda x: x.get("moved_at", ""),
+        reverse=True,
+    )

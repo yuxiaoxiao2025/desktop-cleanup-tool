@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>桌面整理 - 历史记录</title>
+    <style>
+        body { font-family: sans-serif; margin: 1rem; }
+        table { border-collapse: collapse; width: 100%; max-width: 800px; }
+        th, td { border: 1px solid #ccc; padding: 0.5rem 0.75rem; text-align: left; }
+        th { background: #f0f0f0; }
+        tr:hover { background: #f8f8f8; }
+        tr { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>历史记录</h1>
+    {% if entries %}
+    <table>
+        <thead>
+            <tr>
+                <th>原名称</th>
+                <th>目标文件夹</th>
+                <th>移动时间</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in entries %}
+            <tr onclick="location.href='/open?path={{ (e.get('moved_path') or '') | urlencode }}'">
+                <td>{{ e.get('original_name', '') }}</td>
+                <td>{{ e.get('target_folder_display', '') }}</td>
+                <td>{{ e.get('moved_at', '') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>暂无历史记录。</p>
+    {% endif %}
+</body>
+</html>
