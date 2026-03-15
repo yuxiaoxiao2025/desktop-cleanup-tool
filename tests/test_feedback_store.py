@@ -12,7 +12,8 @@ def test_get_feedback_path_returns_path_under_data_dir():
 
 
 def test_add_and_lookup_feedback(tmp_path, monkeypatch):
-    monkeypatch.setattr("config.get_data_dir", lambda: str(tmp_path))
+    import feedback_store
+    monkeypatch.setattr(feedback_store, "get_data_dir", lambda: str(tmp_path))
     from feedback_store import add_feedback, lookup_feedback
     add_feedback(None, file_name="报告.pdf", extension=".pdf", target="投标与结算", original_path="C:\\Users\\x\\Desktop\\报告.pdf")
     found = lookup_feedback(None, file_name="报告.pdf", extension=".pdf")
@@ -26,7 +27,8 @@ def test_add_and_lookup_feedback(tmp_path, monkeypatch):
 
 
 def test_lookup_feedback_returns_none_when_no_match(tmp_path, monkeypatch):
-    monkeypatch.setattr("config.get_data_dir", lambda: str(tmp_path))
+    import feedback_store
+    monkeypatch.setattr(feedback_store, "get_data_dir", lambda: str(tmp_path))
     from feedback_store import add_feedback, lookup_feedback
     add_feedback(None, file_name="a.pdf", extension=".pdf", target="某目录", original_path="")
     assert lookup_feedback(None, file_name="b.pdf", extension=".pdf") is None
@@ -34,7 +36,8 @@ def test_lookup_feedback_returns_none_when_no_match(tmp_path, monkeypatch):
 
 
 def test_get_feedback_by_target(tmp_path, monkeypatch):
-    monkeypatch.setattr("config.get_data_dir", lambda: str(tmp_path))
+    import feedback_store
+    monkeypatch.setattr(feedback_store, "get_data_dir", lambda: str(tmp_path))
     from feedback_store import add_feedback, get_feedback_grouped_by_target
     add_feedback(None, "a.pdf", ".pdf", "投标与结算", "")
     add_feedback(None, "b.pdf", ".pdf", "投标与结算", "")
