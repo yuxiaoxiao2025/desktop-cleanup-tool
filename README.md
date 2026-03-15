@@ -13,7 +13,7 @@
 2. **环境变量（可选）**
 
    - 若启用**智能分类**（在设置页开启「智能分类」），需配置 `DASHSCOPE_API_KEY` 供 Qwen 向量接口使用；未设置时仅使用规则与反馈库，不调用远程 API。
-   - 参考项目根目录下的 `.env.example`，复制为 `.env` 并填入密钥，或直接在系统中设置该环境变量。**若使用 `.env` 文件**，程序不会自动读取，需在启动前由系统/终端加载该文件，或使用 python-dotenv 等工具加载。获取 API Key：<https://help.aliyun.com/zh/model-studio/get-api-key>。
+   - 参考项目根目录下的 `.env.example`，复制为 `.env` 并填入密钥后，**程序启动时会自动加载**项目根目录下的 `.env`（依赖 python-dotenv）；也可直接在系统中设置该环境变量。获取 API Key：<https://help.aliyun.com/zh/model-studio/get-api-key>。
 
 3. **启动程序**
 

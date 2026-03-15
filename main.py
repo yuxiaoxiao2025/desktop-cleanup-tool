@@ -6,6 +6,15 @@ import os
 import socket
 import sys
 import threading
+from pathlib import Path
+
+# 启动时加载项目根目录 .env，使智能分类等所需环境变量（如 DASHSCOPE_API_KEY）在重启后生效
+try:
+    from dotenv import load_dotenv
+    _env_path = Path(__file__).resolve().parent / ".env"
+    load_dotenv(dotenv_path=_env_path)
+except ImportError:
+    pass
 
 import config
 from monitor import run_loop
