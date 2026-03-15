@@ -79,6 +79,9 @@ def resolve_target_with_feedback(
     target = rules.resolve_target(name, is_lnk, config)
     if target is not None:
         return (target, 1.0, "rules")
+    # 快捷方式白名单：规则返回 None 表示不移动
+    if is_lnk:
+        return (None, 0.0, "whitelist")
 
     # 2. 查反馈库
     _, ext = os.path.splitext(name)
