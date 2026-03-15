@@ -19,6 +19,14 @@ app.config["JSON_AS_ASCII"] = False
 app.secret_key = os.urandom(16).hex()
 
 
+def _sync_live_config(cfg: dict) -> None:
+    """将已保存的配置同步到主进程的「活」配置（config_ref），使 monitor/tray 立即生效。"""
+    ref = app.config.get("LIVE_CONFIG_REF")
+    if ref and len(ref) > 0:
+        ref[0].clear()
+        ref[0].update(cfg)
+
+
 def _parse_rules_from_form(form):
     """从 request.form 解析 rules：键为 rules_<i>_name/keywords/extensions/target。"""
     indices = set()
@@ -128,6 +136,7 @@ def settings_page():
     cfg["monitor_paused"] = monitor_paused
     cfg["rules"] = rules
     config_module.save_config(cfg)
+    _sync_live_config(cfg)
     return redirect(url_for("settings_page") + "?saved=1", code=302)
 
 
@@ -143,6 +152,7 @@ def learn_from_desktop_route():
     """从桌面学习：更新 target_candidates 与 shortcut_whitelist，重定向回设置页并提示。"""
     cfg = config_module.load_config()
     learn_from_desktop(cfg)
+    _sync_live_config(cfg)
     return redirect(url_for("settings_page") + "?learned=1", code=302)
 
 

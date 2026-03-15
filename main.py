@@ -86,6 +86,7 @@ def main() -> None:
         cfg["port"] = port
         config.save_config(cfg)
     config_ref = [cfg]
+    app.config["LIVE_CONFIG_REF"] = config_ref
 
     def run_http() -> None:
         app.run(host="127.0.0.1", port=port, use_reloader=False)
