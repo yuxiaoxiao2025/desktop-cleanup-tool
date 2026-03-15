@@ -54,7 +54,9 @@ def _open_in_explorer(entry: dict[str, Any]) -> None:
 def learn_from_desktop(config: dict[str, Any]) -> None:
     """
     从桌面学习：扫描 desktop_path 第一层目录（排除 exclude_folders）得文件夹列表；
+    再扫描一层子文件夹，得到「目标路径候选」如 "父文件夹\\子文件夹"（相对桌面）；
     扫描桌面根目录 .lnk 文件名更新 shortcut_whitelist；写回 save_config。
+    不自动添加 rules 条目。
     """
     desktop = config.get("desktop_path") or ""
     if not desktop or not os.path.isdir(desktop):
@@ -64,7 +66,7 @@ def learn_from_desktop(config: dict[str, Any]) -> None:
         names = os.listdir(desktop)
     except OSError:
         return
-    folders = []
+    candidates_set = set()
     lnk_names = []
     for name in names:
         if name in exclude or name == "desktop.ini":
@@ -73,13 +75,23 @@ def learn_from_desktop(config: dict[str, Any]) -> None:
         if not os.path.exists(path):
             continue
         if os.path.isdir(path):
-            folders.append(name)
+            candidates_set.add(name)
+            try:
+                subnames = os.listdir(path)
+            except OSError:
+                subnames = []
+            for sub in subnames:
+                subpath = os.path.join(path, sub)
+                if os.path.isdir(subpath):
+                    # 相对桌面的路径，统一用反斜杠供设置页下拉使用
+                    rel = name + "\\" + sub
+                    candidates_set.add(rel)
         elif name.lower().endswith(".lnk"):
             lnk_names.append(name)
     config["shortcut_whitelist"] = sorted(lnk_names)
     if "target_candidates" not in config:
         config["target_candidates"] = []
-    config["target_candidates"] = sorted(folders)
+    config["target_candidates"] = sorted(candidates_set)
     save_config(config)
 
 

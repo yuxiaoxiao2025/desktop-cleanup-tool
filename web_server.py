@@ -11,6 +11,7 @@ from flask import Flask, redirect, render_template, request, url_for
 
 import config as config_module
 import history_log
+from tray import learn_from_desktop
 
 app = Flask(__name__)
 app.config["JSON_AS_ASCII"] = False
@@ -113,6 +114,14 @@ def history_page():
     """读全部历史（倒序），渲染 history.html。"""
     entries = history_log.get_all()
     return render_template("history.html", entries=entries)
+
+
+@app.route("/learn", methods=["POST"])
+def learn_from_desktop_route():
+    """从桌面学习：更新 target_candidates 与 shortcut_whitelist，重定向回设置页并提示。"""
+    cfg = config_module.load_config()
+    learn_from_desktop(cfg)
+    return redirect(url_for("settings_page") + "?learned=1", code=302)
 
 
 @app.route("/open")

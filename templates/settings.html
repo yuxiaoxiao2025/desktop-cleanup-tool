@@ -40,6 +40,9 @@
     {% if request.args.get('saved') == '1' %}
     <div class="success">配置已保存。</div>
     {% endif %}
+    {% if request.args.get('learned') == '1' %}
+    <div class="success">已更新目标路径与白名单。</div>
+    {% endif %}
 
     <form method="post" action="/settings" id="settings-form">
         <label for="desktop_path">桌面路径</label>
@@ -99,6 +102,9 @@
         <p style="margin-top: 1.5rem;">
             <button type="submit" class="btn">保存配置</button>
         </p>
+    </form>
+    <form method="post" action="/learn" style="display: inline; margin-top: 0.5rem;">
+        <button type="submit" class="btn">从桌面学习</button>
     </form>
 
     <script>
