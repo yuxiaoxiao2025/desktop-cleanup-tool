@@ -17,10 +17,12 @@ def get_pending_path() -> str:
 
 
 def _normalize_item(item: dict[str, Any]) -> dict[str, Any]:
-    """补全缺省字段：retry_count 缺则 0。"""
+    """补全缺省字段：retry_count 缺则 0；added_at 缺则用 created_at（兼容旧数据）。"""
     out = dict(item)
     if "retry_count" not in out:
         out["retry_count"] = 0
+    if "added_at" not in out or not out["added_at"]:
+        out["added_at"] = out.get("created_at") or ""
     return out
 
 

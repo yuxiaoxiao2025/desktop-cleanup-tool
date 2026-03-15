@@ -102,6 +102,9 @@ def load_config() -> dict[str, Any]:
     for key, value in default.items():
         if key not in data:
             data[key] = value
+    # 规则为空或缺失时用默认规则，避免曾保存过 rules: [] 后一直无规则
+    if not data.get("rules"):
+        data["rules"] = list(default["rules"])
     return data
 
 

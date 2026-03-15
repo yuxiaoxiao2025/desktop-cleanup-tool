@@ -54,9 +54,8 @@ def _open_in_explorer(entry: dict[str, Any]) -> None:
 def learn_from_desktop(config: dict[str, Any]) -> None:
     """
     从桌面学习：扫描 desktop_path 第一层目录（排除 exclude_folders）得文件夹列表；
-    再扫描一层子文件夹，得到「目标路径候选」如 "父文件夹\\子文件夹"（相对桌面）；
-    扫描桌面根目录 .lnk 文件名更新 shortcut_whitelist；写回 save_config。
-    不自动添加 rules 条目。
+    再扫描一层子文件夹，得到「目标路径候选」；更新 shortcut_whitelist；
+    为桌面上存在且尚未在 rules 中出现的目标路径（一级目录名）追加一条简单规则。
     """
     desktop = config.get("desktop_path") or ""
     if not desktop or not os.path.isdir(desktop):
@@ -92,6 +91,22 @@ def learn_from_desktop(config: dict[str, Any]) -> None:
     if "target_candidates" not in config:
         config["target_candidates"] = []
     config["target_candidates"] = sorted(candidates_set)
+    # 为桌面上存在的一级目录且尚未在 rules 中作为 target 的，追加一条简单规则
+    rules = list(config.get("rules") or [])
+    existing_targets = {str(r.get("target")).strip() for r in rules if isinstance(r, dict) and r.get("target")}
+    for name in sorted(candidates_set):
+        if "\\" in name:
+            continue
+        if name in existing_targets:
+            continue
+        rules.append({
+            "name": name,
+            "keywords": [],
+            "extensions": [],
+            "target": name,
+        })
+        existing_targets.add(name)
+    config["rules"] = rules
     save_config(config)
 
 
@@ -154,6 +169,14 @@ def run_tray(
     def learn(_: pystray.Icon) -> None:  # type: ignore[reportInvalidTypeForm]
         learn_from_desktop(get_cfg())
 
+    def organize_now_click(icon: pystray.Icon) -> None:  # type: ignore[reportInvalidTypeForm]
+        monitor.organize_now(get_cfg())
+        icon.title = _build_tooltip(config_ref, get_pending)
+        try:
+            icon.update_menu()
+        except Exception:
+            pass
+
     def quit_app(icon: pystray.Icon, _: Any) -> None:  # type: ignore[reportInvalidTypeForm]
         stop_event.set()
         icon.stop()
@@ -178,6 +201,7 @@ def run_tray(
         ),
         pystray.MenuItem("设置", settings),
         pystray.MenuItem("从桌面学习", learn),
+        pystray.MenuItem("立即整理", organize_now_click),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("退出", quit_app),
     )

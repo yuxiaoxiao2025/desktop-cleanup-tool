@@ -106,7 +106,8 @@ def scan_desktop(config: dict[str, Any]) -> None:
 
 def process_due(config: dict[str, Any]) -> None:
     """
-    处理到期项：解析目标、创建目标目录、移动；失败则重试，满 3 次通知被占用；
+    处理到期项：以「首次加入 pending 的时间」为起点判断是否满延迟；
+    解析目标、创建目标目录、移动；失败则重试，满 3 次通知被占用；
     成功则写历史、移除 pending、通知已移动。
     """
     now = datetime.now()
@@ -116,16 +117,19 @@ def process_due(config: dict[str, Any]) -> None:
     for item in items:
         path = item.get("path")
         name = item.get("name")
-        created_at_str = item.get("created_at")
-        if not path or not name or not created_at_str:
+        if not path or not name:
             continue
         if not os.path.exists(path):
             continue
+        # 延迟以首次加入 pending 的时间为准，缺则用 created_at（兼容旧数据）
+        eligible_at_str = item.get("added_at") or item.get("created_at")
+        if not eligible_at_str:
+            continue
         try:
-            created_at = datetime.fromisoformat(created_at_str)
+            eligible_at = datetime.fromisoformat(eligible_at_str)
         except (ValueError, TypeError):
             continue
-        if (now - created_at).total_seconds() < delay_seconds:
+        if (now - eligible_at).total_seconds() < delay_seconds:
             continue
         _try_move_item(config, item)
 
@@ -155,6 +159,22 @@ def retry_failed(config: dict[str, Any]) -> None:
     items = load_pending(config)
     for item in items:
         if (item.get("retry_count") or 0) <= 0:
+            continue
+        _try_move_item(config, item)
+
+
+def organize_now(config: dict[str, Any]) -> None:
+    """
+    立即整理：对待整理列表中的全部项执行移动，不判断延迟时间。
+    供托盘「立即整理」使用。
+    """
+    items = load_pending(config)
+    for item in items:
+        path = item.get("path")
+        name = item.get("name")
+        if not path or not name:
+            continue
+        if not os.path.exists(path):
             continue
         _try_move_item(config, item)
 
