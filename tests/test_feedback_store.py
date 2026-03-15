@@ -9,4 +9,4 @@ def test_get_feedback_path_returns_path_under_data_dir():
     from feedback_store import get_feedback_path
     path = get_feedback_path()
     assert "feedback" in path or "feedback.json" in path
-    assert get_data_dir() in path or os.path.dirname(path)
+    assert path.startswith(get_data_dir())
