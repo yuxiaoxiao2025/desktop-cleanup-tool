@@ -121,26 +121,24 @@ def run_tray(
     def get_cfg() -> dict[str, Any]:
         return config_ref[0] if config_ref else load_config()
 
+    def _make_history_item(entry: dict[str, Any]) -> pystray.MenuItem:
+        title = f"{entry.get('original_name', '')} → {entry.get('target_folder_display', '')}"
+        return pystray.MenuItem(title, lambda icon, entry=entry: _open_in_explorer(entry))
+
     def history_items() -> list:
         cfg = get_cfg()
         recent = history_log.get_recent(cfg, 10)
         if not recent:
-            return [pystray.MenuItem("（无记录）", lambda: None)]
-        return [
-            pystray.MenuItem(
-                f"{e.get('original_name', '')} → {e.get('target_folder_display', '')}",
-                lambda e=e: _open_in_explorer(e),
-            )
-            for e in recent
-        ]
+            return [pystray.MenuItem("（无记录）", lambda: None)]  # type: ignore[reportInvalidTypeForm]
+        return list(map(_make_history_item, recent))
 
-    def more(_: pystray.Icon) -> None:
+    def more(_: pystray.Icon) -> None:  # type: ignore[reportInvalidTypeForm]
         webbrowser.open(f"http://127.0.0.1:{port}/history")
 
-    def retry(_: pystray.Icon) -> None:
+    def retry(_: pystray.Icon) -> None:  # type: ignore[reportInvalidTypeForm]
         monitor.retry_failed(get_cfg())
 
-    def toggle_pause(icon: pystray.Icon, _: Any) -> None:
+    def toggle_pause(icon: pystray.Icon, _: Any) -> None:  # type: ignore[reportInvalidTypeForm]
         cfg = get_cfg()
         cfg["monitor_paused"] = not cfg.get("monitor_paused", False)
         save_config(cfg)
@@ -150,13 +148,13 @@ def run_tray(
         except Exception:
             pass
 
-    def settings(_: pystray.Icon) -> None:
+    def settings(_: pystray.Icon) -> None:  # type: ignore[reportInvalidTypeForm]
         webbrowser.open(f"http://127.0.0.1:{port}/settings")
 
-    def learn(_: pystray.Icon) -> None:
+    def learn(_: pystray.Icon) -> None:  # type: ignore[reportInvalidTypeForm]
         learn_from_desktop(get_cfg())
 
-    def quit_app(icon: pystray.Icon, _: Any) -> None:
+    def quit_app(icon: pystray.Icon, _: Any) -> None:  # type: ignore[reportInvalidTypeForm]
         stop_event.set()
         icon.stop()
 
@@ -171,12 +169,12 @@ def run_tray(
         pystray.MenuItem(
             "暂停监控",
             toggle_pause,
-            visible=lambda _: not is_paused(),
+            visible=lambda _: not is_paused(),  # type: ignore[reportArgumentType]
         ),
         pystray.MenuItem(
             "恢复监控",
             toggle_pause,
-            visible=lambda _: is_paused(),
+            visible=lambda _: is_paused(),  # type: ignore[reportArgumentType]
         ),
         pystray.MenuItem("设置", settings),
         pystray.MenuItem("从桌面学习", learn),

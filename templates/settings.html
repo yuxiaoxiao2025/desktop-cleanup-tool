@@ -46,7 +46,11 @@
 
     <form method="post" action="/settings" id="settings-form">
         <label for="desktop_path">桌面路径</label>
-        <input type="text" id="desktop_path" name="desktop_path" value="{{ config.get('desktop_path', '') }}" required>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <input type="text" id="desktop_path" name="desktop_path" value="{{ config.get('desktop_path', '') }}" required style="flex: 1; min-width: 200px;">
+            <button type="button" id="btn-pick-folder" class="btn">选择文件夹</button>
+        </div>
+        <span class="hint">可点击「选择文件夹」弹出对话框选择，或直接输入路径。</span>
 
         <label for="delay_hours">延迟时间（小时）</label>
         <span class="hint">新文件/文件夹在桌面停留多久后再自动整理（小时），范围 1–168。</span>
@@ -124,6 +128,22 @@
         function removeRuleRow(btn) {
             btn.closest('tr').remove();
         }
+        document.getElementById('btn-pick-folder').addEventListener('click', function() {
+            const input = document.getElementById('desktop_path');
+            const initial = input.value.trim() || '';
+            const url = '/api/pick-folder' + (initial ? '?initialdir=' + encodeURIComponent(initial) : '');
+            const btn = this;
+            btn.disabled = true;
+            btn.textContent = '请在弹出的窗口中选择…';
+            fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.ok && data.path) {
+                    input.value = data.path;
+                }
+            }).catch(function() {}).finally(function() {
+                btn.disabled = false;
+                btn.textContent = '选择文件夹';
+            });
+        });
     </script>
 </body>
 </html>

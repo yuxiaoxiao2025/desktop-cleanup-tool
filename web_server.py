@@ -5,9 +5,10 @@ Flask Web 服务：历史页 /history，打开路径 /open，设置页 /settings
 import os
 import re
 import subprocess
+import sys
 from urllib.parse import unquote
 
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 
 import config as config_module
 import history_log
@@ -50,6 +51,27 @@ def _parse_rules_from_form(form):
             "target": target or "",
         })
     return rules
+
+
+@app.route("/api/pick-folder")
+def api_pick_folder():
+    """弹出文件夹选择对话框，返回选中路径的 JSON。供设置页「选择文件夹」按钮调用。"""
+    initial = request.args.get("initialdir", "").strip() or os.path.join(os.path.expanduser("~"), "Desktop")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    pick_script = os.path.join(script_dir, "pick_folder.py")
+    if not os.path.isfile(pick_script):
+        return jsonify({"ok": False, "path": "", "error": "pick_folder.py not found"}), 500
+    try:
+        r = subprocess.run(
+            [sys.executable, pick_script, initial],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        path = (r.stdout or "").strip()
+        return jsonify({"ok": True, "path": path})
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return jsonify({"ok": False, "path": "", "error": str(e)}), 500
 
 
 @app.route("/settings", methods=["GET", "POST"])
