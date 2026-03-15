@@ -3,6 +3,7 @@
 主入口：单实例锁、加载配置、启动 HTTP / 监控 / 托盘，退出时清理。
 """
 import os
+import socket
 import sys
 import threading
 
@@ -33,6 +34,19 @@ def _acquire_lock() -> bool:
         _LOCK_FILE = None
         return False
     return True
+
+
+def _ensure_port_usable(port: int) -> int:
+    """
+    检测端口是否可绑定（避免 Windows 保留端口导致 WSAEACCES）。
+    若不可用则返回备用端口 57600。
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("127.0.0.1", port))
+        return port
+    except OSError:
+        return 57600
 
 
 def _release_lock() -> None:
@@ -66,7 +80,11 @@ def main() -> None:
     validate_pending(cfg)
 
     stop_event = threading.Event()
-    port = cfg.get("port", 57682)
+    requested_port = cfg.get("port", 57600)
+    port = _ensure_port_usable(requested_port)
+    if port != requested_port:
+        cfg["port"] = port
+        config.save_config(cfg)
     config_ref = [cfg]
 
     def run_http() -> None:
