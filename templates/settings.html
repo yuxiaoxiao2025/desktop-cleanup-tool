@@ -22,6 +22,7 @@
         .btn { padding: 0.4rem 0.8rem; cursor: pointer; margin-right: 0.5rem; }
         .btn-del { color: #c00; }
         .btn-add { margin-top: 0.5rem; }
+        #rule-suggestions-table th:first-child { width: 2.5em; }
     </style>
 </head>
 <body>
@@ -42,6 +43,9 @@
     {% endif %}
     {% if request.args.get('learned') == '1' %}
     <div class="success">已更新目标路径与白名单。</div>
+    {% endif %}
+    {% if request.args.get('rules_applied') == '1' %}
+    <div class="success">已采纳所选规则建议并写入配置。</div>
     {% endif %}
 
     <form method="post" action="/settings" id="settings-form">
@@ -112,6 +116,28 @@
         <span class="hint" style="margin-left: 0.5rem;">会更新目标路径候选与快捷方式白名单，并为桌面上的一级文件夹（若规则中尚无对应目标）自动追加一条规则。保存后刷新本页可看到新规则。</span>
     </form>
 
+    <section style="margin-top: 2rem;">
+        <label>从反馈生成规则建议</label>
+        <span class="hint">根据历史反馈中的目标与文件类型生成规则候选，勾选后点击「采纳所选」可一次性写入上方分类规则（与现有规则合并、去重）。</span>
+        <p style="margin-top: 0.5rem;">
+            <button type="button" id="btn-load-suggestions" class="btn">加载建议</button>
+            <button type="button" id="btn-apply-suggestions" class="btn" disabled>采纳所选</button>
+        </p>
+        <div id="rule-suggestions-message" class="hint"></div>
+        <table class="rules-table" id="rule-suggestions-table" style="margin-top: 0.5rem; display: none;">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="suggestions-select-all" title="全选"></th>
+                    <th>名称</th>
+                    <th>关键词</th>
+                    <th>扩展名</th>
+                    <th>目标</th>
+                </tr>
+            </thead>
+            <tbody id="rule-suggestions-tbody"></tbody>
+        </table>
+    </section>
+
     <script>
         let ruleIndex = {{ (config.get('rules') or []) | length }};
         function addRuleRow() {
@@ -145,6 +171,91 @@
                 btn.textContent = '选择文件夹';
             });
         });
+
+        (function() {
+            var suggestionsData = [];
+            var msgEl = document.getElementById('rule-suggestions-message');
+            var tableEl = document.getElementById('rule-suggestions-table');
+            var tbodyEl = document.getElementById('rule-suggestions-tbody');
+            var btnLoad = document.getElementById('btn-load-suggestions');
+            var btnApply = document.getElementById('btn-apply-suggestions');
+            var selectAllCb = document.getElementById('suggestions-select-all');
+
+            function setMessage(text, isError) {
+                msgEl.textContent = text || '';
+                msgEl.style.color = isError ? '#c00' : '#555';
+            }
+
+            btnLoad.addEventListener('click', function() {
+                btnLoad.disabled = true;
+                setMessage('加载中…');
+                fetch('/api/rule-suggestions').then(function(r) { return r.json(); }).then(function(data) {
+                    suggestionsData = Array.isArray(data) ? data : [];
+                    tbodyEl.innerHTML = '';
+                    if (suggestionsData.length === 0) {
+                        setMessage('暂无规则建议（需有反馈记录才会生成）。');
+                        tableEl.style.display = 'none';
+                    } else {
+                        suggestionsData.forEach(function(rule, i) {
+                            var tr = document.createElement('tr');
+                            tr.innerHTML =
+                                '<td><input type="checkbox" class="suggestion-cb" data-index="' + i + '"></td>' +
+                                '<td>' + (rule.name || '').replace(/</g, '&lt;') + '</td>' +
+                                '<td>' + (Array.isArray(rule.keywords) ? rule.keywords.join(', ') : '').replace(/</g, '&lt;') + '</td>' +
+                                '<td>' + (Array.isArray(rule.extensions) ? rule.extensions.join(', ') : '').replace(/</g, '&lt;') + '</td>' +
+                                '<td>' + (rule.target || '').replace(/</g, '&lt;') + '</td>';
+                            tbodyEl.appendChild(tr);
+                        });
+                        tableEl.style.display = 'table';
+                        setMessage('已加载 ' + suggestionsData.length + ' 条建议，勾选后点击「采纳所选」。');
+                        selectAllCb.checked = false;
+                    }
+                    btnApply.disabled = suggestionsData.length === 0;
+                }).catch(function() {
+                    setMessage('加载失败', true);
+                    tableEl.style.display = 'none';
+                }).finally(function() {
+                    btnLoad.disabled = false;
+                });
+            });
+
+            selectAllCb.addEventListener('change', function() {
+                tbodyEl.querySelectorAll('.suggestion-cb').forEach(function(cb) {
+                    cb.checked = selectAllCb.checked;
+                });
+            });
+
+            btnApply.addEventListener('click', function() {
+                var selected = [];
+                tbodyEl.querySelectorAll('.suggestion-cb:checked').forEach(function(cb) {
+                    var idx = parseInt(cb.getAttribute('data-index'), 10);
+                    if (!isNaN(idx) && suggestionsData[idx]) selected.push(suggestionsData[idx]);
+                });
+                if (selected.length === 0) {
+                    setMessage('请先勾选要采纳的规则。', true);
+                    return;
+                }
+                btnApply.disabled = true;
+                setMessage('提交中…');
+                fetch('/api/rule-suggestions/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rules: selected })
+                }).then(function(r) {
+                    if (r.status === 200) {
+                        window.location.href = window.location.pathname + '?rules_applied=1';
+                    } else {
+                        return r.json().then(function(d) {
+                            setMessage(d.error || '采纳失败', true);
+                        });
+                    }
+                }).catch(function() {
+                    setMessage('请求失败', true);
+                }).finally(function() {
+                    btnApply.disabled = false;
+                });
+            });
+        })();
     </script>
 </body>
 </html>

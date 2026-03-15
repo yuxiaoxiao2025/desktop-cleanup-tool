@@ -12,6 +12,8 @@ from flask import Flask, jsonify, redirect, render_template, request, send_from_
 
 import config as config_module
 import history_log
+from pending_confirm import confirm as confirm_pending_item, get_list as get_pending_confirm_list
+from rule_suggestions import suggest_rules_from_feedback
 from tray import learn_from_desktop
 
 app = Flask(__name__)
@@ -164,6 +166,87 @@ def learn_from_desktop_route():
     learn_from_desktop(cfg)
     _sync_live_config(cfg)
     return redirect(url_for("settings_page") + "?learned=1", code=302)
+
+
+@app.route("/api/rule-suggestions", methods=["GET"])
+def api_rule_suggestions():
+    """返回从反馈库生成的规则建议列表（suggest_rules_from_feedback）。"""
+    cfg = config_module.load_config()
+    suggestions = suggest_rules_from_feedback(cfg)
+    return jsonify(suggestions)
+
+
+def _rule_dedup_key(r: dict) -> tuple:
+    """用于去重的键：(target, 排序后的 keywords, 排序后的 extensions)。"""
+    kw = tuple(sorted((r.get("keywords") or [])))
+    exts = tuple(sorted(e if (e or "").startswith(".") else "." + (e or "") for e in (r.get("extensions") or [])))
+    return (r.get("target") or "", kw, exts)
+
+
+@app.route("/api/rule-suggestions/apply", methods=["POST"])
+def api_rule_suggestions_apply():
+    """
+    接收 body JSON { "rules": [ { name, keywords, extensions, target } ] }，
+    与现有 config["rules"] 合并（按 target+keywords+extensions 去重），保存配置，返回 200。
+    """
+    if not request.is_json:
+        return jsonify({"ok": False, "error": "需要 JSON 请求体"}), 400
+    data = request.get_json() or {}
+    rules = data.get("rules")
+    if not isinstance(rules, list):
+        return jsonify({"ok": False, "error": "缺少或无效的 rules 数组"}), 400
+    # 规范化为与 config["rules"] 一致：name, keywords, extensions, target
+    new_rules = []
+    for r in rules:
+        if not isinstance(r, dict):
+            continue
+        name = (r.get("name") or "").strip() or (r.get("target") or "")
+        keywords = list(r.get("keywords") or [])
+        extensions = [
+            e.strip() if (e or "").strip().startswith(".") else "." + (e or "").strip()
+            for e in (r.get("extensions") or [])
+            if (e or "").strip()
+        ]
+        target = (r.get("target") or "").strip() or name
+        new_rules.append({"name": name, "keywords": keywords, "extensions": extensions, "target": target})
+    cfg = config_module.load_config()
+    existing = list(cfg.get("rules") or [])
+    seen = {_rule_dedup_key(x) for x in existing}
+    for r in new_rules:
+        if _rule_dedup_key(r) not in seen:
+            seen.add(_rule_dedup_key(r))
+            existing.append(r)
+    cfg["rules"] = existing
+    config_module.save_config(cfg)
+    _sync_live_config(cfg)
+    return "", 200
+
+
+@app.route("/api/pending-confirm", methods=["GET"])
+def api_pending_confirm_list():
+    """返回需用户确认项列表 JSON。"""
+    items = get_pending_confirm_list()
+    return jsonify(items)
+
+
+@app.route("/api/pending-confirm/confirm", methods=["POST"])
+def api_pending_confirm_confirm():
+    """
+    确认一项：body JSON { "path": "...", "target": "..." }。
+    执行移动、写历史、移除 pending、写 feedback、从待确认列表移除。
+    """
+    if not request.is_json:
+        return jsonify({"ok": False, "error": "需要 JSON 请求体"}), 400
+    data = request.get_json() or {}
+    path = (data.get("path") or "").strip()
+    target = (data.get("target") or "").strip()
+    if not path or not target:
+        return jsonify({"ok": False, "error": "缺少 path 或 target"}), 400
+    cfg = config_module.load_config()
+    ok, err = confirm_pending_item(cfg, path, target)
+    if ok:
+        return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": err or "确认失败"}), 400
 
 
 @app.route("/open")

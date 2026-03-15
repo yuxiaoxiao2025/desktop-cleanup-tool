@@ -86,6 +86,8 @@ def get_default_config() -> dict[str, Any]:
         ],
         "shortcut_target": "00快捷方式",
         "default_target": "临时与杂项",
+        "smart_classification_enabled": False,
+        "confidence_threshold": 0.85,
     }
 
 
