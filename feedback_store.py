@@ -64,3 +64,17 @@ def lookup_feedback(config: Any, file_name: str, extension: str) -> dict[str, An
         if isinstance(entry, dict) and entry.get("file_name") == file_name and entry.get("extension") == extension:
             return entry
     return None
+
+
+def get_feedback_grouped_by_target(config: Any) -> dict[str, list[dict[str, Any]]]:
+    """加载反馈后按 target 分组，返回 dict[target, list[条目]]，供规则提炼使用。"""
+    items = _load_feedback(config)
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for entry in items:
+        if not isinstance(entry, dict):
+            continue
+        target = entry.get("target", "")
+        if target not in grouped:
+            grouped[target] = []
+        grouped[target].append(entry)
+    return grouped

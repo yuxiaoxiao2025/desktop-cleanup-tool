@@ -31,3 +31,15 @@ def test_lookup_feedback_returns_none_when_no_match(tmp_path, monkeypatch):
     add_feedback(None, file_name="a.pdf", extension=".pdf", target="某目录", original_path="")
     assert lookup_feedback(None, file_name="b.pdf", extension=".pdf") is None
     assert lookup_feedback(None, file_name="a.pdf", extension=".docx") is None
+
+
+def test_get_feedback_by_target(tmp_path, monkeypatch):
+    monkeypatch.setattr("config.get_data_dir", lambda: str(tmp_path))
+    from feedback_store import add_feedback, get_feedback_grouped_by_target
+    add_feedback(None, "a.pdf", ".pdf", "投标与结算", "")
+    add_feedback(None, "b.pdf", ".pdf", "投标与结算", "")
+    add_feedback(None, "c.docx", ".docx", "开发与需求", "")
+    grouped = get_feedback_grouped_by_target(None)
+    assert "投标与结算" in grouped
+    assert len(grouped["投标与结算"]) >= 2
+    assert "开发与需求" in grouped
