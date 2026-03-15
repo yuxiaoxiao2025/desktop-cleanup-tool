@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import os
+from http import HTTPStatus
 from typing import Any, Tuple
 
 import numpy as np
@@ -46,7 +47,11 @@ def classify_target_candidates(
     except Exception:
         return (None, 0.0)
 
-    if resp is None or not hasattr(resp, "output") or not resp.output:
+    if resp is None:
+        return (None, 0.0)
+    if getattr(resp, "status_code", None) != HTTPStatus.OK:
+        return (None, 0.0)
+    if not hasattr(resp, "output") or not resp.output:
         return (None, 0.0)
 
     embeddings = resp.output.get("embeddings")
