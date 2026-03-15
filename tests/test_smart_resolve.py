@@ -2,6 +2,23 @@
 """smart_resolve 向量分类模块测试。"""
 
 
+def test_resolve_target_with_feedback_rules_first():
+    from smart_resolve import resolve_target_with_feedback
+
+    config = {
+        "rules": [
+            {"keywords": ["投标"], "extensions": [".pdf"], "target": "投标与结算"}
+        ],
+        "default_target": "临时与杂项",
+    }
+    target, confidence, source = resolve_target_with_feedback(
+        "投标文件.pdf", False, config
+    )
+    assert source == "rules"
+    assert target == "投标与结算"
+    assert confidence >= 0.99
+
+
 def test_classify_target_candidates_exists():
     from smart_resolve import classify_target_candidates
 

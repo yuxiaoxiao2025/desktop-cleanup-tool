@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 向量分类模块：零样本选目标与置信度。
-仅向量相关逻辑，不依赖 feedback_store。
+统一解析入口：规则 → 反馈 → 向量，返回 (target, confidence, source)。
 """
 from __future__ import annotations
 
-from typing import Tuple
+import os
+from typing import Any, Tuple
 
 import numpy as np
 
@@ -60,3 +61,44 @@ def classify_target_candidates(
     ]
     best_idx = int(np.argmax(scores))
     return (target_folders[best_idx], float(scores[best_idx]))
+
+
+def resolve_target_with_feedback(
+    name: str, is_lnk: bool, config: dict[str, Any]
+) -> Tuple[str | None, float, str]:
+    """
+    统一解析入口：规则 → 反馈 → 向量，返回 (target, confidence, source)。
+    当 target 为 None（如快捷方式白名单）时，调用方不移动。
+    """
+    import rules
+    import feedback_store
+
+    default_target = config.get("default_target") or "临时与杂项"
+
+    # 1. 规则优先
+    target = rules.resolve_target(name, is_lnk, config)
+    if target is not None:
+        return (target, 1.0, "rules")
+
+    # 2. 查反馈库
+    _, ext = os.path.splitext(name)
+    found = feedback_store.lookup_feedback(config, name, ext)
+    if found is not None:
+        return (found["target"], 1.0, "feedback")
+
+    # 3. 智能分类（向量）
+    if config.get("smart_classification_enabled"):
+        rules_list = config.get("rules") or []
+        folder_set = {default_target}
+        for rule in rules_list:
+            if isinstance(rule, dict) and rule.get("target"):
+                folder_set.add(rule["target"])
+        folder_list = list(folder_set)
+        vec_target, score = classify_target_candidates(
+            name + " " + ext, [ext], folder_list
+        )
+        if vec_target is not None:
+            return (vec_target, score, "vector")
+
+    # 4. 未命中或未开智能 / 向量返回 None
+    return (default_target, 0.0, "default")
