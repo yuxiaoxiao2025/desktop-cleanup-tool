@@ -22,11 +22,28 @@ from pending import (
 )
 from rules import resolve_target
 
+import smart_resolve
+import feedback_store
+
+# 需用户确认列表（置信度不足时加入，Task 8 可扩展为持久化）
+_pending_confirm: list[dict[str, Any]] = []
+
+
+def add_to_pending_confirm(path: str, name: str, suggested_target: str, confidence: float) -> None:
+    """将一项加入需用户确认列表。"""
+    _pending_confirm.append({
+        "path": path,
+        "name": name,
+        "suggested_target": suggested_target,
+        "confidence": confidence,
+    })
+
 
 def _try_move_item(config: dict[str, Any], item: dict[str, Any]) -> bool:
     """
     对单条待整理项执行「解析目标 → 创建目录 → 移动」。
-    成功或无法解析目标时移除 pending 并返回 True；移动失败时增加重试并返回 False。
+    成功或无法解析目标时移除 pending 并返回 True；移动失败时增加重试并返回 False；
+    置信度不足时不移动、不写反馈、不删 pending，加入待确认列表并返回 False。
     """
     path = item.get("path")
     name = item.get("name")
@@ -36,10 +53,23 @@ def _try_move_item(config: dict[str, Any], item: dict[str, Any]) -> bool:
         remove_pending(config, path)
         return True
     is_lnk = name.lower().endswith(".lnk")
-    target = resolve_target(name, is_lnk, config)
+
+    if config and config.get("smart_classification_enabled"):
+        target, confidence, source = smart_resolve.resolve_target_with_feedback(name, is_lnk, config)
+    else:
+        target = resolve_target(name, is_lnk, config)
+        confidence = 1.0
+        source = "rules"
+
     if target is None:
         remove_pending(config, path)
         return True
+
+    threshold = config.get("confidence_threshold", 0.85) if config else 0.85
+    if confidence < threshold:
+        add_to_pending_confirm(path, name, target, confidence)
+        return False
+
     dest_dir = os.path.join(config.get("desktop_path") or "", target)
     try:
         os.makedirs(dest_dir, exist_ok=True)
@@ -64,6 +94,10 @@ def _try_move_item(config: dict[str, Any], item: dict[str, Any]) -> bool:
     )
     remove_pending(config, path)
     notify_moved(name, target_folder_display)
+
+    if source in ("vector", "feedback") or source == "rules":
+        ext = os.path.splitext(name)[1]
+        feedback_store.add_feedback(config, name, ext, target, original_path=path)
     return True
 
 
@@ -165,9 +199,10 @@ def retry_failed(config: dict[str, Any]) -> None:
 
 def organize_now(config: dict[str, Any]) -> None:
     """
-    立即整理：对待整理列表中的全部项执行移动，不判断延迟时间。
+    立即整理：先扫描桌面将新项加入 pending，再对待整理列表中的全部项执行移动，不判断延迟时间。
     供托盘「立即整理」使用。
     """
+    scan_desktop(config)
     items = load_pending(config)
     for item in items:
         path = item.get("path")
