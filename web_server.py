@@ -12,6 +12,7 @@ from flask import Flask, jsonify, redirect, render_template, request, send_from_
 
 import config as config_module
 import history_log
+from pending_confirm import confirm as confirm_pending_item, get_list as get_pending_confirm_list
 from tray import learn_from_desktop
 
 app = Flask(__name__)
@@ -164,6 +165,33 @@ def learn_from_desktop_route():
     learn_from_desktop(cfg)
     _sync_live_config(cfg)
     return redirect(url_for("settings_page") + "?learned=1", code=302)
+
+
+@app.route("/api/pending-confirm", methods=["GET"])
+def api_pending_confirm_list():
+    """返回需用户确认项列表 JSON。"""
+    items = get_pending_confirm_list()
+    return jsonify(items)
+
+
+@app.route("/api/pending-confirm/confirm", methods=["POST"])
+def api_pending_confirm_confirm():
+    """
+    确认一项：body JSON { "path": "...", "target": "..." }。
+    执行移动、写历史、移除 pending、写 feedback、从待确认列表移除。
+    """
+    if not request.is_json:
+        return jsonify({"ok": False, "error": "需要 JSON 请求体"}), 400
+    data = request.get_json() or {}
+    path = (data.get("path") or "").strip()
+    target = (data.get("target") or "").strip()
+    if not path or not target:
+        return jsonify({"ok": False, "error": "缺少 path 或 target"}), 400
+    cfg = config_module.load_config()
+    ok, err = confirm_pending_item(cfg, path, target)
+    if ok:
+        return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": err or "确认失败"}), 400
 
 
 @app.route("/open")

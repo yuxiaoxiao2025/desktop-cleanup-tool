@@ -20,23 +20,11 @@ from pending import (
     remove_pending,
     validate_pending,
 )
+from pending_confirm import add_to_pending_confirm
 from rules import resolve_target
 
 import smart_resolve
 import feedback_store
-
-# 需用户确认列表（置信度不足时加入，Task 8 可扩展为持久化）
-_pending_confirm: list[dict[str, Any]] = []
-
-
-def add_to_pending_confirm(path: str, name: str, suggested_target: str, confidence: float) -> None:
-    """将一项加入需用户确认列表。"""
-    _pending_confirm.append({
-        "path": path,
-        "name": name,
-        "suggested_target": suggested_target,
-        "confidence": confidence,
-    })
 
 
 def _try_move_item(config: dict[str, Any], item: dict[str, Any]) -> bool:
