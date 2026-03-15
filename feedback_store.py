@@ -14,7 +14,7 @@ def get_feedback_path() -> str:
 
 
 def _load_feedback(config: Any) -> list[dict[str, Any]]:
-    """读取 get_feedback_path() 的 JSON，返回 list；无文件或无效返回 []。"""
+    """读取 get_feedback_path() 的 JSON，返回 list；无文件或无效返回 []。config 仅为与上层 API 一致，内部不使用。"""
     path = get_feedback_path()
     if not os.path.isfile(path):
         return []
@@ -29,7 +29,7 @@ def _load_feedback(config: Any) -> list[dict[str, Any]]:
 
 
 def _save_feedback(config: Any, items: list[dict[str, Any]]) -> None:
-    """将反馈列表写回 UTF-8。"""
+    """将反馈列表写回 UTF-8。config 仅为与上层 API 一致，内部不使用。"""
     path = get_feedback_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:

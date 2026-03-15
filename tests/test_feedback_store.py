@@ -13,8 +13,21 @@ def test_get_feedback_path_returns_path_under_data_dir():
 
 def test_add_and_lookup_feedback(tmp_path, monkeypatch):
     monkeypatch.setattr("config.get_data_dir", lambda: str(tmp_path))
-    from feedback_store import add_feedback, lookup_feedback, get_feedback_path
+    from feedback_store import add_feedback, lookup_feedback
     add_feedback(None, file_name="报告.pdf", extension=".pdf", target="投标与结算", original_path="C:\\Users\\x\\Desktop\\报告.pdf")
     found = lookup_feedback(None, file_name="报告.pdf", extension=".pdf")
     assert found is not None
     assert found.get("target") == "投标与结算"
+    # 同一 key 再追加一条，应返回最近一条
+    add_feedback(None, file_name="报告.pdf", extension=".pdf", target="其他文件夹", original_path="")
+    found2 = lookup_feedback(None, file_name="报告.pdf", extension=".pdf")
+    assert found2 is not None
+    assert found2.get("target") == "其他文件夹"
+
+
+def test_lookup_feedback_returns_none_when_no_match(tmp_path, monkeypatch):
+    monkeypatch.setattr("config.get_data_dir", lambda: str(tmp_path))
+    from feedback_store import add_feedback, lookup_feedback
+    add_feedback(None, file_name="a.pdf", extension=".pdf", target="某目录", original_path="")
+    assert lookup_feedback(None, file_name="b.pdf", extension=".pdf") is None
+    assert lookup_feedback(None, file_name="a.pdf", extension=".docx") is None
