@@ -9,3 +9,12 @@ def test_get_feedback_path_returns_path_under_data_dir():
     path = get_feedback_path()
     assert os.path.basename(path) == "feedback.json"
     assert path.startswith(get_data_dir())
+
+
+def test_add_and_lookup_feedback(tmp_path, monkeypatch):
+    monkeypatch.setattr("config.get_data_dir", lambda: str(tmp_path))
+    from feedback_store import add_feedback, lookup_feedback, get_feedback_path
+    add_feedback(None, file_name="报告.pdf", extension=".pdf", target="投标与结算", original_path="C:\\Users\\x\\Desktop\\报告.pdf")
+    found = lookup_feedback(None, file_name="报告.pdf", extension=".pdf")
+    assert found is not None
+    assert found.get("target") == "投标与结算"
