@@ -4,3 +4,5 @@ PyYAML>=6.0
 Flask>=2.3.0
 watchdog>=3.0.0
 winotify>=1.1.0
+dashscope
+numpy
