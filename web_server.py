@@ -8,7 +8,7 @@ import subprocess
 import sys
 from urllib.parse import unquote
 
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, url_for
 
 import config as config_module
 import history_log
@@ -59,6 +59,16 @@ def _parse_rules_from_form(form):
             "target": target or "",
         })
     return rules
+
+
+@app.route("/favicon.ico")
+def favicon():
+    """避免浏览器自动请求 /favicon.ico 时返回 404。有 static/favicon.ico 则返回该文件，否则返回 204。"""
+    static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+    favicon_path = os.path.join(static_dir, "favicon.ico")
+    if os.path.isfile(favicon_path):
+        return send_from_directory(static_dir, "favicon.ico")
+    return "", 204
 
 
 @app.route("/api/pick-folder")
